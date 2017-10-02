@@ -1,0 +1,8 @@
+##
+## test macro for setting up folder monitoring
+##
+clear
+sassign Monitor.Id "prbr901" /nolist
+sassign Monitor.DirPath "c:\EG\WMM\smmonitor\test\prbr901" /nolist
+sassign Monitor.Extensions "map>xtr<mmv" /nolist
+sassign Monitor.LotDir "[Ll][Oo][Tt][0-9][0-9]*" /nolist
