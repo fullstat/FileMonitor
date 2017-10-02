@@ -1,0 +1,60 @@
+smm_runScavenge
+##
+## execute the scavenge script
+##
+global %SMM_MonitorId, $SMM_Scavenge, %SMM_Scavenge
+
+let $errflg = true
+
+if not(ifdef("%SMM_Scavenge")) then
+   error "The global, %SMM_Scavenge, was not defined." ;
+      /number=configuration
+   goto fatalerror
+endif
+
+if $SMM_Scavenge then
+   if not(ifdef("%SMM_Scavenge")) then
+      error "The global, %SMM_Scavenge, was not defined." ;
+         /number=configuration
+      goto fatalerror
+   endif
+
+   let $isAMacro = false
+   let $ln = len(%SMM_Scavenge)
+   if $ln > 4 then
+      let %ext = lowerc(substr(%SMM_Scavenge,$ln-3,4))
+      if %ext == ".stc" then
+         let $isAMacro = true
+      endif
+   endif
+
+   if $isAMacro then
+      exec %SMM_Scavenge
+   else
+      xqt %SMM_Scavenge
+   endif
+
+   if not(ifexist("scavenge.dirpath") > 0 and ;
+          ifexist("scavenge.pathattributes") > 0 and ;
+          ifexist("scavenge.notify") > 0) then
+      error "The variables 'Scavenge.DirPath', 'Scavenge.PathAttributes', ";
+            "and 'Scavenge.Notify'&nmust not be deleted by ";
+             %SMM_Scavenge /number=configuration
+      goto fatalerror
+   endif
+
+   if case(scavenge.dirpath) != case(scavenge.pathattributes) or ;
+      case(scavenge.dirpath) != case(scavenge.notify) then
+      error "The variables 'Scavenge.DirPath', 'Scavenge.PathAttributes', ";
+            "and 'Scavenge.Notify'&nmust have the same number of cases.";
+             /number=configuration
+      goto fatalerror
+   endif
+endif
+
+let $errflg = false
+
+fatalerror:if $errflg then
+   call seterror(1)
+endif
+endproc

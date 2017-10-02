@@ -1,0 +1,43 @@
+smm_runLotAction
+##
+## execute the action for the lot
+##
+global %SMM_LotPath, $SMM_LotAction, %SMM_LotAction
+
+let $errflg = true
+
+if not(ifdef("%SMM_LotPath")) then
+   error "The global, %SMM_LotPath, was not defined." ;
+      /number=configuration
+   goto fatalerror
+endif
+
+if $SMM_LotAction then
+   if not(ifdef("%SMM_LotAction")) then
+      error "The global, %SMM_LotAction, was not defined." ;
+         /number=configuration
+      goto fatalerror
+   endif
+
+   let $isAMacro = false
+   let $ln = len(%SMM_LotAction)
+   if $ln > 4 then
+      let %ext = lowerc(substr(%SMM_LotAction,$ln-3,4))
+      if %ext == ".stc" then
+         let $isAMacro = true
+      endif
+   endif
+
+   if $isAMacro then
+      exec %SMM_LotAction
+   else
+      xqt %SMM_LotAction
+   endif
+endif
+
+let $errflg = false
+
+fatalerror:if $errflg then
+   call seterror(1)
+endif
+endproc

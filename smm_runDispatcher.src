@@ -1,0 +1,35 @@
+smm_runDispatcher
+##
+## execute the action for the map
+##
+global %SMM_Dispatcher
+
+let $errflg = true
+
+if not(ifdef("%SMM_Dispatcher")) then
+   error "The global, %SMM_Dispatcher, was not defined." ;
+      /number=configuration
+   goto fatalerror
+endif
+
+let $isAMacro = false
+let $ln = len(%SMM_Dispatcher)
+if $ln > 4 then
+   let %ext = lowerc(substr(%SMM_Dispatcher,$ln-3,4))
+   if %ext == ".stc" then
+      let $isAMacro = true
+   endif
+endif
+
+if $isAMacro then
+   exec %SMM_Dispatcher
+else
+   xqt %SMM_Dispatcher
+endif
+
+let $errflg = false
+
+fatalerror:if $errflg then
+   call seterror(1)
+endif
+endproc

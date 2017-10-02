@@ -1,0 +1,20 @@
+// SMMonitor.idl : IDL source for SMMonitor.dll
+//
+
+// This file will be processed by the MIDL tool to
+// produce the type library (SMMonitor.tlb) and marshalling code.
+
+import "oaidl.idl";
+import "ocidl.idl";
+
+[
+	uuid(46DC6372-24EC-4AA7-A6E8-E950D31CE7E1),
+	version(1.0),
+	helpstring("SMMonitor 1.0 Type Library")
+]
+library SMMonitor
+{
+	importlib("stdole32.tlb");
+	importlib("stdole2.tlb");
+
+};

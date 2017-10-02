@@ -1,0 +1,41 @@
+smm_runVerifyLot
+##
+## execute the verify lot proc or macro.
+##
+global %SMM_LotPath, $SMM_VerifyLot, %SMM_VerifyLot
+
+let $errflg = true
+
+if not(ifdef("%SMM_VerifyLot")) then
+   error "The global, %SMM_VerifyLot, was not defined." ;
+      /number=configuration
+   goto fatalerror
+endif
+
+if not(ifdef("%SMM_LotPath")) then
+   error "The global, %SMM_LotPath, was not defined." ;
+      /number=configuration
+   goto fatalerror
+endif
+
+let $isAMacro = false
+let $ln = len(%SMM_VerifyLot)
+if $ln > 4 then
+   let %ext = lowerc(substr(%SMM_VerifyLot,$ln-3,4))
+   if %ext == ".stc" then
+      let $isAMacro = true
+   endif
+endif
+
+if $isAMacro then
+   exec %SMM_VerifyLot
+else
+   xqt %SMM_VerifyLot
+endif
+
+let $errflg = false
+
+fatalerror:if $errflg then
+   call seterror(1)
+endif
+endproc

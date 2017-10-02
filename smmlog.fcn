@@ -1,0 +1,84 @@
+function smmlog (%msg:v, $logLevel:v)
+##
+## perform SMM logging. the log is written to the standard logs
+## folder. a new log is started for each day of the month. when the days
+## roll over the older logs are replaced.  the day of month determination
+## is based on the local date, not UTC date.
+
+global $EG_LogLevel, %EG_LogFile
+
+let $fd = -1
+
+if $EG_LogLevel == 0 or $EG_LogLevel < $logLevel then  ## don't log
+   return
+endif
+
+## determine the directory for the log files from %EG_LogFile
+
+let %logDir = reverse(%EG_LogFile)
+let $idx = indexc(%logDir,"/\")
+let %logDir = reverse(substr(%logDir,$idx,len(%logDir)))
+
+## get the name for today's log file
+
+let %logFile = %logDir//"SmmLog_"//putwith(daypart(day(4)),"%-2d")//".log"
+
+## this needs to be in a loop to handle simultaneous access.  if it cannot
+## be cleaned after 3 tries, then just append to it anyway
+
+let $count = 0
+repeat
+   let $okay = 1
+   let $count = $count + 1
+   if faccess(%logFile,0) then         ## already exists, see if it is old
+      let $status = fstat(%logFile,$dev,$inode,$mode,$nlink,$uid,$gid,$rdev,;
+            $fsize,$adate,$atime,$mdate,$mtime,$cdate,$ctime)
+      if $status == 0 then
+         if abs(day(4) - $mdate) > 2 then   ## time to roll it over (delete)
+            call filedelete(%logFile,$status)
+            if $status != 0 then
+               let $okay = 0
+            endif
+         endif
+      endif
+   endif
+until $okay or $count > 3
+
+let $count = 0
+repeat
+   let $okay = 1
+   let $count = $count + 1
+   let $fd = open(%logFile,getdef("O_APPEND"),0o666)
+   if $fd < 0 then
+      let $okay = 0
+      call sleep(-25)
+   endif
+until $okay or $count > 10
+
+if $fd < 0 then
+   error "The smmlog() function failed to open the log file '" %logFile "'.&n";
+      /number=io
+   goto fatalerror
+endif
+
+## indent extra lines
+
+let %msg = change(%msg,char(10),char(10)//repeat(" ",19),-1)
+
+let %msg = putwith(day(4)+(time(7)/86400),"%-19.8n")//" "//%msg//char(10)
+let $ln = len(%msg)
+let $nw = write($fd,%msg,$ln)
+if $nw != $ln then
+   error "The smmlog() function failed to write to the log file '" %logFile ;
+         "'.&n" /number=iowriteaccess
+   goto fatalerror
+endif
+
+let $status = close($fd)
+let $fd = -1
+return
+
+fatalerror:if $fd >= 0 then
+   let $status = close($fd)
+endif
+return

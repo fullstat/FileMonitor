@@ -1,0 +1,149 @@
+smm_getMonitorData
+##
+## get and validate the monitor data.  the global, %SMM_LoadMonitorData,
+## contains the name of the proc or macro to execute.  after execution:
+##
+##  - ensure that the required variables exist
+##  - sort and eliminate duplicates
+##
+global %SMM_LoadMonitorData, $SMM_MonitorDupCount, %SMM_MonitorDups
+
+let $errflg = true
+
+if not(ifdef("%SMM_LoadMonitorData")) then
+   error "The global, %SMM_LoadMonitorData, was not defined." ;
+      /number=configuration
+   goto fatalerror
+endif
+
+## these are used to indicate if duplicate monitor.id's were found.  the
+## former is the count and the latter is the list of id's.
+
+let $SMM_MonitorDupCount = 0
+let %SMM_MonitorDups = ""
+
+let $isAMacro = false
+let $ln = len(%SMM_LoadMonitorData)
+if $ln > 4 then
+   let %ext = lowerc(substr(%SMM_LoadMonitorData,$ln-3,4))
+   if %ext == ".stc" then
+      let $isAMacro = true
+   endif
+endif
+
+if $isAMacro then
+   exec %SMM_LoadMonitorData
+else
+   xqt %SMM_LoadMonitorData
+endif
+
+## the variables, monitor.id and monitor.dirpath, must exist and have
+## the same number of cases
+
+if not(ifexist("monitor.id") > 0 and ifexist("monitor.dirpath") > 0) then
+   error "The variables 'Monitor.Id' and 'Monitor.DirPath' must be created by ";
+          %SMM_LoadMonitorData /number=configuration
+   goto fatalerror
+endif
+
+let $n = case(monitor.id)
+let $v1 = dataset(1,"monitor")
+let $vn = dataset(-1,"monitor")
+
+do $i = $v1,$vn
+   if case(v$i) != $n then
+      error "The Monitor dataset variables created by " %SMM_LoadMonitorData ;
+            " must have the same number of cases." /number=syntaxunequalcases
+      goto fatalerror
+   endif
+enddo
+
+## sort and check for duplicates id's (duplicate folders are okay)
+
+let monitor.id = trim(left(lowerc(monitor.id)))
+sort monitor. by monitor.id /nolist
+let %dups = ""
+
+do $i = 2,$n
+   if monitor.id($i-1) == monitor.id($i) then
+      let $SMM_MonitorDupCount = $SMM_MonitorDupCount + 1
+      let %SMM_MonitorDups = %SMM_MonitorDups // trim(monitor.id($i)) // " "
+      let %dups = %dups // encode($i) // " "
+   endif
+enddo
+
+if len(%dups) > 0 then
+   omit monitor. (@v[%dups])
+   let $n = case(monitor.id)
+   let %SMM_MonitorDups = trim(%SMM_MonitorDups)
+endif
+
+let monitor.dirpath = trim(left(monitor.dirpath))
+let monitor.dirpath = change(monitor.dirpath,"/","\",-1)
+
+## make sure the extensions have the white space removed and eliminate
+## trailing commas
+
+if ifexist("monitor.extensions") then
+   let monitor.extensions = lowerc(compress(monitor.extensions))
+   do $i = 1,$n
+      let $didEdit = false
+      let %ext = monitor.extensions($i)
+      if len(%ext) > 0 then
+         while (index(%ext,",,") > 0)
+            let $didEdit = true
+            let %ext = change(%ext,",,",",",-1)
+         endwhile
+         if substr(%ext,1,1) == "," then
+            let $ln = len(%ext)
+            let $didEdit = true
+            if $ln > 1 then
+               let %ext = substr(%ext,2,len(%ext)-1)
+            else
+               let %ext = ""
+            endif
+         endif
+         let $ln = len(%ext)
+         if $ln > 1 then
+            if substr(%ext,$ln,1) == "," then
+               let $didEdit = true
+               let %ext = substr(%ext,1,$ln-1)
+            endif
+         endif
+         if $didEdit then
+            let monitor.extensions($i) = %ext
+         endif
+      endif
+   enddo
+endif
+
+if ifexist("monitor.lotdir") then
+   let monitor.lotdir = trim(left(monitor.lotdir))
+endif
+
+if ifexist("monitor.verifymap") then
+   let monitor.verifymap = trim(left(monitor.verifymap))
+endif
+
+if ifexist("monitor.mapaction") then
+   let monitor.mapaction = trim(left(monitor.mapaction))
+endif
+
+if ifexist("monitor.verifylot") then
+   let monitor.verifylot = trim(left(monitor.verifylot))
+endif
+
+if ifexist("monitor.lotaction") then
+   let monitor.lotaction = trim(left(monitor.lotaction))
+endif
+
+if ifexist("monitor.scavenge") then
+   let monitor.scavenge = trim(left(monitor.scavenge))
+endif
+
+let $errflg = false
+
+fatalerror:if $errflg then
+   call seterror(1)
+endif
+endproc

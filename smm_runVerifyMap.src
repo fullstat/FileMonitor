@@ -1,0 +1,41 @@
+smm_runVerifyMap
+##
+## execute the verify map proc or macro.
+##
+global %SMM_MapPath, $SMM_VerifyMap, %SMM_VerifyMap
+
+let $errflg = true
+
+if not(ifdef("%SMM_VerifyMap")) then
+   error "The global, %SMM_VerifyMap, was not defined." ;
+      /number=configuration
+   goto fatalerror
+endif
+
+if not(ifdef("%SMM_MapPath")) then
+   error "The global, %SMM_MapPath, was not defined." ;
+      /number=configuration
+   goto fatalerror
+endif
+
+let $isAMacro = false
+let $ln = len(%SMM_VerifyMap)
+if $ln > 4 then
+   let %ext = lowerc(substr(%SMM_VerifyMap,$ln-3,4))
+   if %ext == ".stc" then
+      let $isAMacro = true
+   endif
+endif
+
+if $isAMacro then
+   exec %SMM_VerifyMap
+else
+   xqt %SMM_VerifyMap
+endif
+
+let $errflg = false
+
+fatalerror:if $errflg then
+   call seterror(1)
+endif
+endproc
